@@ -1,17 +1,17 @@
-import { BrowserRouter as Router, Route, Routes} from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Write from "./components/Write";
-
-import logo from './logo.svg';
-import './App.css';
+import Login from "./components/log";
+import Muestras from "./components/Muestras";
 
 function App() {
   return (
     <Router>
-      <Router>
-        
-      </Router>
+      <Routes>
+        <Route path="/" element={<Write />} />
+        <Route path="/log" element={<Login />} />
+        <Route path="/Muestras" element={<Muestras />} />
+      </Routes>
     </Router>
-   
   );
 }
 

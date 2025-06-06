@@ -1,12 +1,10 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ⬅️ Importa hook
 import app from "../FirebaseConfiguration";
 import { getDatabase, ref, get, child } from "firebase/database";
 
-function Login() {
+function Login({ onLoginSuccess }) {
   const [nombreUsuario, setNombreUsuario] = useState("");
   const [mensaje, setMensaje] = useState("");
-  const navigate = useNavigate(); // ⬅️ Instancia del navegador
 
   const iniciarSesion = async () => {
     const dbRef = ref(getDatabase(app));
@@ -20,11 +18,11 @@ function Login() {
         );
 
         if (usuarioEncontrado) {
+          // ✅ Guardamos el nombre en localStorage
           localStorage.setItem("nombreUsuario", usuarioEncontrado.nombreUsuario);
-          setMensaje("Inicio de sesión exitoso");
 
-          // ⬇️ Redirigir a /muestras
-          navigate("/Muestras");
+          setMensaje("Inicio de sesión exitoso");
+          if (onLoginSuccess) onLoginSuccess(usuarioEncontrado);
         } else {
           setMensaje("Usuario no encontrado");
         }
