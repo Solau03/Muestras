@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import app from "../FirebaseConfiguration";
 import { getDatabase, ref, set, push, onValue } from "firebase/database";
 
-function Muestras() {
+function OperarioMuestras() {
   const [turbiedad, setTurbiedad] = useState("");
   const [ph, setPh] = useState("");
   const [color, setColor] = useState("");
@@ -27,7 +27,7 @@ function Muestras() {
   const guardarDatos = async () => {
     const nombreUsuario = localStorage.getItem("nombreUsuario") || "Desconocido";
     const fecha = new Date().toLocaleDateString(); // formato: dd/mm/yyyy
-    const hora = new Date().toLocaleTimeString(); 
+    const hora = new Date().toLocaleTimeString(); // formato: hh:mm:ss
 
     // Validar que los campos sean números válidos
     const phNum = parseFloat(ph);
@@ -81,24 +81,23 @@ function Muestras() {
       });
   };
 
- return (
+  return (
   <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div className="max-w-4xl mx-auto">
       {/* Encabezado */}
       <div className="text-center mb-8">
         <h2 className="text-3xl font-extrabold text-gray-900">Registro de Muestras</h2>
-        <p className="mt-2 text-sm text-gray-600">Ingrese los parámetros de calidad del agua</p>
+        <p className="mt-2 text-sm text-gray-600">Sistema de control de calidad del agua</p>
       </div>
 
       {/* Formulario */}
       <div className="bg-white shadow rounded-lg p-6 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label htmlFor="turbiedad" className="block text-sm font-medium text-gray-700 mb-1">Turbiedad</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Turbiedad</label>
             <input
               type="text"
-              id="turbiedad"
-              placeholder="Ej: 2.5 NTU"
+              placeholder="NTU"
               value={turbiedad}
               onChange={(e) => setTurbiedad(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -106,11 +105,10 @@ function Muestras() {
           </div>
           
           <div>
-            <label htmlFor="ph" className="block text-sm font-medium text-gray-700 mb-1">pH</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">pH</label>
             <input
               type="text"
-              id="ph"
-              placeholder="Ej: 7.2"
+              placeholder="0-14"
               value={ph}
               onChange={(e) => setPh(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -118,11 +116,10 @@ function Muestras() {
           </div>
           
           <div>
-            <label htmlFor="cloro" className="block text-sm font-medium text-gray-700 mb-1">Cloro</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cloro</label>
             <input
               type="text"
-              id="cloro"
-              placeholder="Ej: 1.8 mg/L"
+              placeholder="mg/L"
               value={cloro}
               onChange={(e) => setCloro(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -130,11 +127,10 @@ function Muestras() {
           </div>
           
           <div>
-            <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
             <input
               type="text"
-              id="color"
-              placeholder="Ej: 10 UC"
+              placeholder="UC"
               value={color}
               onChange={(e) => setColor(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -142,10 +138,10 @@ function Muestras() {
           </div>
         </div>
         
-        <div className="mt-6">
+        <div className="mt-6 flex justify-center">
           <button
             onClick={guardarDatos}
-            className="w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             Guardar Datos
           </button>
@@ -154,12 +150,11 @@ function Muestras() {
 
       {/* Tabla de muestras */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <h3 className="px-6 py-4 text-lg font-medium text-gray-900 border-b border-gray-200">Muestras registradas</h3>
+        <h3 className="px-6 py-4 text-lg font-medium text-gray-900 border-b border-gray-200">Historial de Muestras</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turbiedad</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cloro</th>
@@ -171,11 +166,10 @@ function Muestras() {
             <tbody className="bg-white divide-y divide-gray-200">
               {muestras.map((muestra, index) => (
                 <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{muestra.nombreUsuario}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Turbiedad}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Ph}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Cloro}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Color}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{muestra.Turbiedad}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{muestra.Ph}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{muestra.Cloro}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{muestra.Color}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Fecha}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Hora}</td>
                 </tr>
@@ -188,4 +182,4 @@ function Muestras() {
   </div>
 );
 }
-export default Muestras;
+export default OperarioMuestras;
