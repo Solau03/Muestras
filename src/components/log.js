@@ -53,7 +53,7 @@ function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-white-100 p-4">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-sm">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
         <input

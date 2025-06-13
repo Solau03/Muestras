@@ -31,10 +31,12 @@ export default function AdminDashboard() {
       <aside className="w-64 bg-white shadow-md p-4">
         <h2 className="text-2xl font-bold text-blue-600 mb-6">Admin</h2>
         <nav className="space-y-4">
-          <a href="#" className="block text-gray-700 hover:text-blue-600">📊 Dashboard</a>
-          <a href="#" className="block text-gray-700 hover:text-blue-600">👥 Usuarios</a>
-          <a href="#" className="block text-gray-700 hover:text-blue-600">⚙️ Configuración</a>
-          <a href="#" className="block text-gray-700 hover:text-red-500">🚪 Cerrar sesión</a>
+          <a href="/Admi" className="block text-gray-700 hover:text-blue-600">Usuarios </a>
+          <a href="/Muestras" className="block text-gray-700 hover:text-blue-600">Muestras Calidad </a>
+          <a href="/Muestrasreportes" className="block text-gray-700 hover:text-blue-600">Reportes calidad</a>
+          <a href="/AdmiOrden" className="block text-gray-700 hover:text-blue-600">Ordenes Reparación</a>
+          <a href="/Macros" className="block text-gray-700 hover:text-red-500">Lecturas Macro</a>
+          <a href="/ReporteMacros" className="block text-gray-700 hover:text-red-500">Reportes Macro</a>
         </nav>
       </aside>
 

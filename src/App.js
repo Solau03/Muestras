@@ -7,6 +7,14 @@ import OperarioMuestras from "./components/OperarioMuetras";
 import "./index.css"
 import FormularioRegistroUsuario from "./components/Registro";
 import AdminDashboard from "./components/Admi";
+import OperarioDashboard from "./components/Operario";
+import MacroLecturas from "./components/Macro";
+import ReporteMacros from "./components/ReporteMacros";
+import OrdenRegistro from "./components/Reparaciones";
+import AdminOrdenes from "./components/OrdenAdmi";
+import NivelTanque from "./components/NivelTanque";
+
+
 function App() {
   return (
     <Router>
@@ -18,6 +26,12 @@ function App() {
         <Route path="/MuestrasReportes" element={<Reporte />} />
         <Route path="/OperarioMuestras" element={<OperarioMuestras />} />
         <Route path="/Admi" element={<AdminDashboard />} />
+        <Route path="/OperarioDashboard" element={<OperarioDashboard />} />
+        <Route path="/Macros" element={<MacroLecturas />} />
+        <Route path="/Orden" element={<OrdenRegistro />} />
+        <Route path="/ReporteMacros" element={<ReporteMacros />} />
+        <Route path="/AdmiOrden" element={<AdminOrdenes />} />
+        <Route path="/NivelTanque" element={<NivelTanque />} />
       </Routes>
     </Router>
   );

@@ -159,8 +159,24 @@ function Reporte() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="flex min-h-screen bg-gradient-to-br from-green-100 to-blue-100">
+    {/* Sidebar */}
+    <aside className="w-64 bg-white shadow-md p-6 flex-shrink-0">
+      <h2 className="text-2xl font-bold text-blue-600 mb-6">Admin</h2>
+      <nav className="space-y-4">
+        <a href="/Admi" className="block text-gray-700 hover:text-blue-600">Usuarios </a>
+        <a href="/Muestras" className="block text-gray-700 hover:text-blue-600">Muestras Calidad</a>
+        <a href="/Muestrasreportes" className="block text-gray-700 hover:text-blue-600">Reportes calidad</a>
+        <a href="/AdmiOrden" className="block text-gray-700 hover:text-blue-600">Órdenes Reparación</a>
+        <a href="/Macros" className="block text-gray-700 hover:text-red-500">Lecturas Macro</a>
+        <a href="/ReporteMacros" className="block text-gray-700 hover:text-red-500">Reportes Macro</a>
+      </nav>
+    </aside>
+
+    {/* Contenido principal */}
+    <main className="flex-1 p-8 overflow-auto">
+      <div className="max-w-6xl mx-auto">
+        {/* Aquí va todo tu contenido existente sin cambios importantes */}
         {/* Encabezado */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900">Reporte de Muestras</h2>
@@ -385,6 +401,7 @@ function Reporte() {
           )}
         </div>
       </div>
+      </main>
     </div>
   );
 }
