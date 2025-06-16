@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import app from "../FirebaseConfiguration";
 import { getDatabase, ref, onValue } from "firebase/database";
@@ -45,10 +44,10 @@ function ReporteMacros() {
             id: key,
             ...item,
             fecha: item.fecha,
-            fechaISO, // Guardamos versión ISO para filtrado
+            fechaISO,
+            fechaObj: new Date(fechaISO),
             lectura: parseFloat(item.lectura || 0),
-            macro: item.tipoMacro || "",
-            fechaObj: new Date(fechaISO) // Objeto Date para comparaciones
+            macro: item.tipoMacro || ""
           };
         });
         setDatos(lista);
@@ -56,7 +55,7 @@ function ReporteMacros() {
     });
   }, []);
 
-  // Función mejorada de filtrado por fechas
+  // Función de filtrado por fechas
   const filtrarPorFecha = (datosAFiltrar = datos) => {
     if (!fechaInicio && !fechaFin) return datosAFiltrar;
     
@@ -80,57 +79,79 @@ function ReporteMacros() {
     return filtrarPorFecha().filter((d) => d.macro === macroSeleccionado);
   };
 
-  const agruparPorMes = (datosFiltrados, agruparPorMacro = false) => {
-    const agrupado = {};
-    
-    datosFiltrados.forEach((d) => {
-      if (!d.fechaObj) return;
+  // Preparar datos diarios para el gráfico
+  const prepararDatosDiarios = (datosFiltrados, agruparPorMacro = false) => {
+    if (agruparPorMacro) {
+      const datosPorFecha = {};
       
-      const fecha = d.fechaObj;
-      const mes = `${fecha.getFullYear()}-${(fecha.getMonth() + 1).toString().padStart(2, "0")}`;
+      datosFiltrados.forEach((d) => {
+        if (!d.fechaObj) return;
+        
+        const fechaKey = d.fechaObj.toISOString().split('T')[0];
+        
+        if (!datosPorFecha[fechaKey]) {
+          datosPorFecha[fechaKey] = {
+            fecha: fechaKey,
+            fechaMostrar: d.fecha // Mostrar formato original
+          };
+        }
+        
+        datosPorFecha[fechaKey][d.macro] = d.lectura;
+      });
       
-      const key = agruparPorMacro ? `${d.macro}-${mes}` : mes;
-      
-      if (!agrupado[key]) agrupado[key] = [];
-      agrupado[key].push(d.lectura);
-    });
-
-    return Object.keys(agrupado).map((key) => {
-      const lecturas = agrupado[key];
-      const promedio = lecturas.reduce((a, b) => a + b, 0) / lecturas.length;
-      
-      if (agruparPorMacro) {
-        const [macro, mes] = key.split('-');
-        return { macro, mes, promedio: parseFloat(promedio.toFixed(2)) };
-      }
-      
-      return { mes: key, promedio: parseFloat(promedio.toFixed(2)) };
-    });
+      return Object.values(datosPorFecha).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    } else {
+      return datosFiltrados
+        .map(d => ({
+          fecha: d.fechaObj.toISOString().split('T')[0],
+          fechaMostrar: d.fecha,
+          lectura: d.lectura,
+          macro: d.macro
+        }))
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    }
   };
 
-  // Resto del código permanece igual...
+  // Exportar a Excel con datos diarios
   const exportarAExcel = () => {
     let datosExportar;
     let nombreArchivo;
     
     if (tipoReporte === "individual") {
-      datosExportar = agruparPorMes(filtrarPorMacroYFecha());
-      nombreArchivo = `Reporte_${macroSeleccionado.replace(/"/g, '')}.xlsx`;
+      datosExportar = prepararDatosDiarios(filtrarPorMacroYFecha());
+      nombreArchivo = `Reporte_Diario_${macroSeleccionado.replace(/"/g, '')}.xlsx`;
     } else {
-      datosExportar = agruparPorMes(filtrarPorFecha(), true);
-      nombreArchivo = `Reporte_Conjunto_Macros.xlsx`;
+      datosExportar = prepararDatosDiarios(filtrarPorFecha(), true);
+      nombreArchivo = `Reporte_Diario_Conjunto_Macros.xlsx`;
     }
 
-    const hoja = XLSX.utils.json_to_sheet(datosExportar);
+    // Formatear datos para Excel
+    const datosFormateados = datosExportar.map(item => {
+      if (tipoReporte === "individual") {
+        return {
+          Fecha: item.fechaMostrar,
+          'Lectura (m³/día)': item.lectura,
+          Macro: item.macro
+        };
+      } else {
+        const registro = { Fecha: item.fechaMostrar };
+        macrosDisponibles.forEach(macro => {
+          registro[macro] = item[macro] || '';
+        });
+        return registro;
+      }
+    });
+
+    const hoja = XLSX.utils.json_to_sheet(datosFormateados);
     const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, "PromediosPorMes");
+    XLSX.utils.book_append_sheet(libro, hoja, "DatosDiarios");
     const excelBuffer = XLSX.write(libro, { bookType: "xlsx", type: "array" });
     const archivo = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(archivo, nombreArchivo);
   };
 
   const datosFiltrados = tipoReporte === "individual" ? filtrarPorMacroYFecha() : filtrarPorFecha();
-  const datosAgrupados = agruparPorMes(datosFiltrados, tipoReporte === "conjunto");
+  const datosParaGrafico = prepararDatosDiarios(datosFiltrados, tipoReporte === "conjunto");
 
   const calcularEstadisticas = (macro = null) => {
     let datosParaCalculo = datosFiltrados;
@@ -151,54 +172,6 @@ function ReporteMacros() {
       max: max.toFixed(2),
       avg: avg.toFixed(2),
     };
-  };
-
-  const prepararDatosConjuntos = () => {
-    const datosPorMacro = {};
-    
-    macrosDisponibles.forEach(macro => {
-      datosPorMacro[macro] = {};
-    });
-
-    datosFiltrados.forEach(d => {
-      if (!d.fechaObj) return;
-      
-      const fecha = d.fechaObj;
-      const mes = `${fecha.getFullYear()}-${(fecha.getMonth() + 1).toString().padStart(2, "0")}`;
-      
-      if (!datosPorMacro[d.macro][mes]) {
-        datosPorMacro[d.macro][mes] = [];
-      }
-      datosPorMacro[d.macro][mes].push(d.lectura);
-    });
-
-    const mesesUnicos = new Set();
-    const promediosPorMacro = {};
-    
-    macrosDisponibles.forEach(macro => {
-      promediosPorMacro[macro] = [];
-      
-      Object.keys(datosPorMacro[macro]).forEach(mes => {
-        mesesUnicos.add(mes);
-        const promedio = datosPorMacro[macro][mes].reduce((a, b) => a + b, 0) / datosPorMacro[macro][mes].length;
-        promediosPorMacro[macro].push({
-          mes,
-          promedio: parseFloat(promedio.toFixed(2))
-        });
-      });
-    });
-
-    const mesesOrdenados = Array.from(mesesUnicos).sort();
-    const datosCombinados = mesesOrdenados.map(mes => {
-      const dato = { mes };
-      macrosDisponibles.forEach(macro => {
-        const macroData = promediosPorMacro[macro].find(d => d.mes === mes);
-        dato[macro] = macroData ? macroData.promedio : null;
-      });
-      return dato;
-    });
-
-    return datosCombinados;
   };
 
   return (
@@ -222,8 +195,8 @@ function ReporteMacros() {
           {/* Título */}
           <h2 className="text-2xl font-bold mb-6 text-center text-green-800">
             {tipoReporte === "individual"
-              ? `Reporte de Lecturas para ${macroSeleccionado}`
-              : "Reporte Conjunto de Todos los Macros"}
+              ? `Reporte Diario de Lecturas para ${macroSeleccionado}`
+              : "Reporte Diario Conjunto de Todos los Macros"}
           </h2>
 
           {/* Filtros */}
@@ -252,20 +225,14 @@ function ReporteMacros() {
             <input
               type="date"
               value={fechaInicio}
-              onChange={(e) => {
-                console.log("Fecha inicio seleccionada:", e.target.value);
-                setFechaInicio(e.target.value);
-              }}
+              onChange={(e) => setFechaInicio(e.target.value)}
               className="p-2 border rounded"
               placeholder="Fecha inicio"
             />
             <input
               type="date"
               value={fechaFin}
-              onChange={(e) => {
-                console.log("Fecha fin seleccionada:", e.target.value);
-                setFechaFin(e.target.value);
-              }}
+              onChange={(e) => setFechaFin(e.target.value)}
               className="p-2 border rounded"
               placeholder="Fecha fin"
             />
@@ -283,13 +250,23 @@ function ReporteMacros() {
               <div className="bg-white p-4 rounded-lg shadow mb-6">
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart
-                    data={tipoReporte === "conjunto" ? prepararDatosConjuntos() : datosAgrupados}
+                    data={datosParaGrafico}
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
+                    <XAxis 
+                      dataKey="fechaMostrar" 
+                      tickFormatter={(value) => {
+                        // Mostrar formato corto de fecha (dd/mm)
+                        const parts = value.split('/');
+                        return parts.length === 3 ? `${parts[0]}/${parts[1]}` : value;
+                      }}
+                    />
                     <YAxis label={{ value: 'm³/día', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip />
+                    <Tooltip 
+                      formatter={(value) => [`${value} m³/día`, 'Lectura']}
+                      labelFormatter={(label) => `Fecha: ${label}`}
+                    />
                     <Legend />
                     {tipoReporte === "conjunto" ? (
                       macrosDisponibles.map(macro => (
@@ -304,7 +281,7 @@ function ReporteMacros() {
                     ) : (
                       <Line
                         type="monotone"
-                        dataKey="promedio"
+                        dataKey="lectura"
                         stroke={COLORS_MACROS[macroSeleccionado]}
                         name={macroSeleccionado}
                         activeDot={{ r: 8 }}

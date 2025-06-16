@@ -13,6 +13,8 @@ import ReporteMacros from "./components/ReporteMacros";
 import OrdenRegistro from "./components/Reparaciones";
 import AdminOrdenes from "./components/OrdenAdmi";
 import NivelTanque from "./components/NivelTanque";
+import OpeNivelTanque from "./components/OpeTanque.js";
+import OpeMacroLecturas from "./components/OpeMacro";
 
 
 function App() {
@@ -25,6 +27,7 @@ function App() {
         <Route path="/Muestras" element={<Muestras />} />
         <Route path="/MuestrasReportes" element={<Reporte />} />
         <Route path="/OperarioMuestras" element={<OperarioMuestras />} />
+        <Route path="/OperarioMacros" element={<OpeMacroLecturas />} />
         <Route path="/Admi" element={<AdminDashboard />} />
         <Route path="/OperarioDashboard" element={<OperarioDashboard />} />
         <Route path="/Macros" element={<MacroLecturas />} />
@@ -32,6 +35,7 @@ function App() {
         <Route path="/ReporteMacros" element={<ReporteMacros />} />
         <Route path="/AdmiOrden" element={<AdminOrdenes />} />
         <Route path="/NivelTanque" element={<NivelTanque />} />
+        <Route path="/OperarioNivelTanque" element={<OpeNivelTanque />} />
       </Routes>
     </Router>
   );

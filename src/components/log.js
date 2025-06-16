@@ -31,7 +31,7 @@ function Login({ onLoginSuccess }) {
               navigate("/Muestras");
               break;
             case "OperarioPlanta":
-              navigate("/OperarioMuestras");
+              navigate("/OperarioDashboard");
               break;
             case "OperarioBocatoma":
               navigate("/Operario Muestras");

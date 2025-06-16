@@ -27,7 +27,7 @@ function NivelTanque() {
   const guardarRegistro = async () => {
     const valor = parseFloat(nivel);
     if (isNaN(valor) || valor < 0) {
-      setMensaje("⚠️ Ingrese un valor válido en centímetros");
+      setMensaje("⚠️ Ingrese un valor válido");
       return;
     }
 
@@ -67,7 +67,7 @@ function NivelTanque() {
       "Usuario": registro.usuario,
       "Fecha": registro.fecha,
       "Hora": registro.hora,
-      "Nivel (cm)": registro.nivel
+      "Nivel (m)": registro.nivel
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -101,7 +101,7 @@ function NivelTanque() {
             <div className="flex items-end gap-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nivel del Tanque (cm)
+                  Nivel del Tanque (m)
                 </label>
                 <input
                   type="number"
@@ -167,7 +167,7 @@ function NivelTanque() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nivel (cm)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nivel (m)</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -178,7 +178,7 @@ function NivelTanque() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{registro.fecha}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{registro.hora}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {registro.nivel} cm
+                        {registro.nivel} m
                       </td>
                     </tr>
                   ))
