@@ -34,7 +34,7 @@ function Login({ onLoginSuccess }) {
               navigate("/OperarioDashboard");
               break;
             case "OperarioBocatoma":
-              navigate("/Operario Muestras");
+              navigate("/BocatomaDashboard");
               break;
             default:
               navigate("/Muestras"); // Ruta por defecto
