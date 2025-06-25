@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import app from "../FirebaseConfiguration";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const ITEMS = [
   { key: "Ph", label: "pH", color: "#8884d8" },
@@ -12,11 +14,13 @@ const ITEMS = [
 
 function Reporte() {
   const [muestras, setMuestras] = useState([]);
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+  const [fechaInicio, setFechaInicio] = useState(new Date());
+  const [fechaFin, setFechaFin] = useState(new Date());
   const [itemsSeleccionados, setItemsSeleccionados] = useState(["Ph"]);
   const [datosFiltrados, setDatosFiltrados] = useState([]);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [puntoSeleccionado, setPuntoSeleccionado] = useState({});
 
   const db = getDatabase(app);
   const reporteRef = useRef();
@@ -30,16 +34,24 @@ function Reporte() {
     });
   }, [db]);
 
-  const filtrarDatos = () => {
-    if (!fechaInicio || !fechaFin) {
-      alert("Selecciona el rango de fechas");
-      return;
-    }
+  // Cargar datos iniciales (últimos 7 días)
+  useEffect(() => {
+    const fin = new Date();
+    const inicio = new Date();
+    inicio.setDate(inicio.getDate() - 7);
+    setFechaInicio(inicio);
+    setFechaFin(fin);
+  }, []);
 
-    const [ai, mi, di] = fechaInicio.split("-");
-    const [af, mf, df] = fechaFin.split("-");
-    const fechaIni = new Date(`${ai}-${mi}-${di}`);
-    const fechaFin_ = new Date(`${af}-${mf}-${df}T23:59:59`);
+  const filtrarDatos = () => {
+    setCargando(true);
+    
+    // Ajustar fechas para incluir todo el día
+    const inicio = new Date(fechaInicio);
+    inicio.setHours(0, 0, 0, 0);
+    
+    const fin = new Date(fechaFin);
+    fin.setHours(23, 59, 59, 999);
 
     const filtrados = muestras.filter((m) => {
       if (!m.Fecha) return false;
@@ -47,10 +59,11 @@ function Reporte() {
       const [d, m_, a] = m.Fecha.split("/").map((v) => v.padStart(2, "0"));
       const fechaMuestra = new Date(`${a}-${m_}-${d}`);
 
-      return fechaMuestra >= fechaIni && fechaMuestra <= fechaFin_;
+      return fechaMuestra >= inicio && fechaMuestra <= fin;
     });
 
     setDatosFiltrados(filtrados);
+    setCargando(false);
   };
 
   const toggleItem = (key) => {
@@ -67,7 +80,7 @@ function Reporte() {
       .map((m) => ({
         fecha: m.Fecha + " " + (m.Hora || ""),
         valor: parseFloat(m[itemKey]),
-        [itemKey]: parseFloat(m[itemKey])
+        [itemKey]: parseFloat(m[itemKey]),
       }));
 
   const calculosEstadisticos = (itemKey) => {
@@ -80,9 +93,34 @@ function Reporte() {
     return { max, min, avg };
   };
 
+  // Componente personalizado para el tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
+          <p className="font-bold">{label}</p>
+          <p className={payload[0].name === 'pH' ? 'text-blue-600' : 'text-green-600'}>
+            {`${payload[0].name}: ${payload[0].value}`}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Manejar clic en un punto de la gráfica
+  const handleClick = (data, index, itemKey) => {
+    if (data && data.activePayload) {
+      setPuntoSeleccionado(prev => ({
+        ...prev,
+        [itemKey]: data.activePayload[0].payload
+      }));
+    }
+  };
+
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-green-100 to-blue-100">
-      {/* Overlay para móviles cuando el menú está abierto */}
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+      {/* Overlay para móviles */}
       {menuAbierto && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
@@ -91,22 +129,35 @@ function Reporte() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed md:relative z-30 md:z-0 w-64 bg-white shadow-md p-6 transform transition-transform duration-300 ease-in-out ${
+      <aside className={`fixed md:sticky top-0 z-30 md:z-0 w-64 bg-white shadow-md p-4 transform transition-transform duration-300 ease-in-out h-screen md:h-auto ${
         menuAbierto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
-        <h2 className="text-2xl font-bold text-blue-600 mb-6">Admin</h2>
-        <nav className="space-y-4">
-          <a href="/Admi" className="block text-gray-700 hover:text-blue-600">Usuarios</a>
-          <a href="/Muestras" className="block text-gray-700 hover:text-blue-600">Muestras Calidad</a>
-          <a href="/Muestrasreportes" className="block text-gray-700 hover:text-blue-600">Reportes calidad</a>
-          <a href="/AdmiOrden" className="block text-gray-700 hover:text-blue-600">Órdenes Reparación</a>
-          <a href="/Macros" className="block text-gray-700 hover:text-red-500">Lecturas Macro</a>
-          <a href="/ReporteMacros" className="block text-gray-700 hover:text-red-500">Reportes Macro</a>
-        </nav>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-blue-600">Admin</h2>
+          <button 
+            className="md:hidden text-gray-500 text-xl"
+            onClick={() => setMenuAbierto(false)}
+          >
+            ×
+          </button>
+        </div>
+        <nav className="space-y-2">
+        <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
+        <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
+        <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
+        <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
+        <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
+        <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
+        <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
+        <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
+        <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
+        <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
+        <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
+      </nav>
       </aside>
 
       {/* Contenido principal */}
-      <main className="flex-1 p-4 md:p-8 overflow-auto relative">
+      <main className="flex-1 p-4 md:p-6">
         {/* Mobile menu button */}
         <button 
           className="md:hidden fixed top-4 left-4 z-40 bg-blue-600 text-white p-2 rounded-full shadow-lg"
@@ -122,32 +173,37 @@ function Reporte() {
             <p className="mt-2 text-sm text-gray-600">Análisis de calidad del agua</p>
           </div>
 
-          {/* Filtros en barra horizontal */}
+          {/* Filtros */}
           <div className="bg-white shadow rounded-lg p-4 md:p-6 mb-6">
             <div className="flex flex-col md:flex-row md:items-end gap-4">
               {/* Fecha Inicio */}
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Desde:</label>
-                <input
-                  type="date"
-                  value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                <DatePicker
+                  selected={fechaInicio}
+                  onChange={(date) => setFechaInicio(date)}
+                  selectsStart
+                  startDate={fechaInicio}
+                  endDate={fechaFin}
+                  className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
 
               {/* Fecha Fin */}
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hasta:</label>
-                <input
-                  type="date"
-                  value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                <DatePicker
+                  selected={fechaFin}
+                  onChange={(date) => setFechaFin(date)}
+                  selectsEnd
+                  startDate={fechaInicio}
+                  endDate={fechaFin}
+                  minDate={fechaInicio}
+                  className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
 
-              {/* Items a graficar */}
+              {/* Parámetros */}
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Parámetros:</label>
                 <div className="flex flex-wrap gap-2">
@@ -155,7 +211,7 @@ function Reporte() {
                     <button
                       key={key}
                       onClick={() => toggleItem(key)}
-                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                         itemsSeleccionados.includes(key)
                           ? "bg-blue-600 text-white border border-blue-600"
                           : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
@@ -171,7 +227,7 @@ function Reporte() {
               <div>
                 <button
                   onClick={filtrarDatos}
-                  className="w-full md:w-auto px-4 md:px-6 py-2 md:py-3 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                  className="w-full md:w-auto px-4 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
                 >
                   Generar Reporte
                 </button>
@@ -181,7 +237,12 @@ function Reporte() {
 
           {/* Resultados */}
           <div ref={reporteRef} className="bg-white shadow rounded-lg p-4 md:p-6">
-            {datosFiltrados.length > 0 ? (
+            {cargando ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+                <p>Cargando datos...</p>
+              </div>
+            ) : datosFiltrados.length > 0 ? (
               <>
                 {itemsSeleccionados.length === 0 && (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
@@ -214,6 +275,7 @@ function Reporte() {
                               <LineChart
                                 data={datosGrafico}
                                 margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                                onClick={(data) => handleClick(data, null, itemKey)}
                               >
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis 
@@ -224,7 +286,7 @@ function Reporte() {
                                   tick={{ fontSize: 10 }}
                                 />
                                 <YAxis />
-                                <Tooltip />
+                                <Tooltip content={<CustomTooltip />} />
                                 <Legend />
                                 <Line
                                   type="monotone"
@@ -238,6 +300,28 @@ function Reporte() {
                             </ResponsiveContainer>
                           </div>
 
+                          {/* Detalle del punto seleccionado */}
+                          {puntoSeleccionado[itemKey] && (
+                            <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+                              <h3 className="font-medium text-gray-800 mb-2">Dato seleccionado - {itemInfo.label}</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                  <p className="text-sm text-gray-600">Fecha y hora</p>
+                                  <p className="font-semibold">{puntoSeleccionado[itemKey].fecha}</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-600">Valor</p>
+                                  <p className="text-2xl font-bold" style={{ color: itemInfo.color }}>
+                                    {puntoSeleccionado[itemKey].valor}
+                                  </p>
+                                </div>
+                                
+                              </div>
+                              
+                            </div>
+                          )}
+
+                          {/* Estadísticas */}
                           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="bg-gray-50 p-3 rounded-lg">
                               <p className="text-sm font-medium text-gray-500">Máximo</p>
@@ -301,6 +385,6 @@ function Reporte() {
       </main>
     </div>
   );
-}
+};
 
 export default Reporte;

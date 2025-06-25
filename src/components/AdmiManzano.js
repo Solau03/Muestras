@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDatabase, ref, push, onValue, off, query, orderByChild, equalTo, update } from 'firebase/database';
-import app  from '../FirebaseConfiguration';
+import { getDatabase, ref, push, onValue, off, query, orderByChild, remove } from 'firebase/database';
+import app from '../FirebaseConfiguration';
+import * as XLSX from 'xlsx';
 
-const AdmiRegistroVisitas = () => {
-  const [seccionActiva, setSeccionActiva] = useState(null);
+const AdmiRegistroCloroPH = () => {
+  const [seccionActiva, setSeccionActiva] = useState('aplicacion');
   const [ubicacion, setUbicacion] = useState(null);
   const [errorUbicacion, setErrorUbicacion] = useState(null);
-  const [registros, setRegistros] = useState({
-    bocatoma: [],
-    venecia: [],
-    samaria: []
+  const [registrosCloro, setRegistrosCloro] = useState([]);
+  const [registrosPH, setRegistrosPH] = useState([]);
+  const [formData, setFormData] = useState({
+    ph: '',
+    cloro: ''
   });
-  const [rutasActivas, setRutasActivas] = useState({});
+  const [errores, setErrores] = useState({});
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const navigate = useNavigate();
   const usuario = localStorage.getItem('nombreUsuario') || 'Operario';
 
@@ -40,100 +43,138 @@ const AdmiRegistroVisitas = () => {
     return () => navigator.geolocation.clearWatch(watchId);
   };
 
-  // Guardar registro en Firebase
-  const guardarRegistro = async (tipo, accion, registroId = null) => {
+  // Guardar registro de aplicación de cloro
+  const aplicarCloro = async () => {
     const db = getDatabase(app);
     const ahora = new Date();
     
     const registroData = {
       usuario,
-      tipo,
       fecha: ahora.toLocaleDateString(),
-      horaInicio: accion === 'Iniciado' ? ahora.toLocaleTimeString() : null,
-      horaFinal: accion === 'Finalizado' ? ahora.toLocaleTimeString() : null,
-      accion,
-      ubicacionInicial: accion === 'Iniciado' ? (ubicacion || { lat: 'N/A', lng: 'N/A', precision: 'N/A' }) : null,
-      ubicacionFinal: accion === 'Finalizado' ? (ubicacion || { lat: 'N/A', lng: 'N/A', precision: 'N/A' }) : null,
-      estado: accion === 'Iniciado' ? 'en_progreso' : 'completado',
+      hora: ahora.toLocaleTimeString(),
+      ubicacion: ubicacion || { lat: 'N/A', lng: 'N/A', precision: 'N/A' },
       timestamp: Date.now()
     };
 
     try {
-      if (accion === 'Iniciado') {
-        const newRef = push(ref(db, `registrosVisitas/${tipo}`));
-        await update(newRef, registroData);
-        return newRef.key;
-      } else if (registroId) {
-        await update(ref(db, `registrosVisitas/${tipo}/${registroId}`), {
-          horaFinal: ahora.toLocaleTimeString(),
-          ubicacionFinal: ubicacion || { lat: 'N/A', lng: 'N/A', precision: 'N/A' },
-          estado: 'completado',
-          accion: 'Finalizado'
-        });
-      }
+      await push(ref(db, 'registrosCloro'), registroData);
+      alert('Aplicación de cloro registrada correctamente');
     } catch (error) {
       console.error('Error guardando en Firebase:', error);
+      alert('Error al registrar la aplicación de cloro');
     }
-    return null;
+  };
+
+  // Eliminar registro de cloro
+  const eliminarRegistroCloro = async (id) => {
+    if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
+    
+    const db = getDatabase(app);
+    try {
+      await remove(ref(db, `registrosCloro/${id}`));
+      alert('Registro eliminado correctamente');
+    } catch (error) {
+      console.error('Error eliminando registro:', error);
+      alert('Error al eliminar el registro');
+    }
+  };
+
+  // Eliminar registro de pH/cloro
+  const eliminarRegistroPHCloro = async (id) => {
+    if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
+    
+    const db = getDatabase(app);
+    try {
+      await remove(ref(db, `registrosPHCloro/${id}`));
+      alert('Registro eliminado correctamente');
+    } catch (error) {
+      console.error('Error eliminando registro:', error);
+      alert('Error al eliminar el registro');
+    }
+  };
+
+  // Guardar registro de pH y cloro
+  const registrarPHCloro = async () => {
+    // Validar los datos
+    const nuevosErrores = {};
+    
+    if (!formData.ph || isNaN(formData.ph)) {
+      nuevosErrores.ph = 'El pH debe ser un número válido';
+    } else if (parseFloat(formData.ph) < 6.5 || parseFloat(formData.ph) > 9) {
+      nuevosErrores.ph = 'El pH debe estar entre 6.5 y 9';
+    }
+    
+    if (!formData.cloro || isNaN(formData.cloro)) {
+      nuevosErrores.cloro = 'El cloro debe ser un número válido';
+    } else if (parseFloat(formData.cloro) < 0.3 || parseFloat(formData.cloro) > 2.0) {
+      nuevosErrores.cloro = 'El cloro debe estar entre 0.3 y 2.0';
+    }
+    
+    setErrores(nuevosErrores);
+    
+    if (Object.keys(nuevosErrores).length > 0) {
+      return;
+    }
+
+    const db = getDatabase(app);
+    const ahora = new Date();
+    
+    const registroData = {
+      usuario,
+      ph: parseFloat(formData.ph),
+      cloro: parseFloat(formData.cloro),
+      fecha: ahora.toLocaleDateString(),
+      hora: ahora.toLocaleTimeString(),
+      ubicacion: ubicacion || { lat: 'N/A', lng: 'N/A', precision: 'N/A' },
+      timestamp: Date.now()
+    };
+
+    try {
+      await push(ref(db, 'registrosPHCloro'), registroData);
+      alert('Registro de pH y cloro guardado correctamente');
+      setFormData({
+        ph: '',
+        cloro: ''
+      });
+    } catch (error) {
+      console.error('Error guardando en Firebase:', error);
+      alert('Error al guardar el registro');
+    }
   };
 
   // Cargar registros desde Firebase
   useEffect(() => {
     const db = getDatabase(app);
     
-    // Referencias separadas para cada tipo de registro
-    const refs = {
-      bocatoma: query(ref(db, 'registrosVisitas/bocatoma'), orderByChild('timestamp')),
-      venecia: query(ref(db, 'registrosVisitas/venecia'), orderByChild('timestamp')),
-      samaria: query(ref(db, 'registrosVisitas/samaria'), orderByChild('timestamp'))
-    };
+    const refCloro = query(ref(db, 'registrosCloro'), orderByChild('timestamp'));
+    const listenerCloro = onValue(refCloro, (snapshot) => {
+      const data = snapshot.val();
+      const registrosArray = data ? Object.entries(data).map(([id, registro]) => ({
+        id,
+        ...registro
+      })) : [];
+      
+      registrosArray.sort((a, b) => b.timestamp - a.timestamp);
+      setRegistrosCloro(registrosArray);
+    });
 
-    const listeners = Object.entries(refs).map(([tipo, ref]) => {
-      return onValue(ref, (snapshot) => {
-        const data = snapshot.val();
-        let registrosArray = [];
-        
-        if (data) {
-          // Convertir a array y ordenar por timestamp descendente (más reciente primero)
-          registrosArray = Object.entries(data).map(([id, registro]) => ({
-            id,
-            ...registro
-          })).sort((a, b) => b.timestamp - a.timestamp); // Orden descendente
-        }
-
-        setRegistros(prev => ({
-          ...prev,
-          [tipo]: registrosArray
-        }));
-
-        // Verificar rutas activas (busca en el array ya ordenado)
-        const rutaActiva = registrosArray.find(r => r.estado === 'en_progreso');
-        setRutasActivas(prev => ({
-          ...prev,
-          [tipo]: rutaActiva ? rutaActiva.id : null
-        }));
-      });
+    const refPH = query(ref(db, 'registrosPHCloro'), orderByChild('timestamp'));
+    const listenerPH = onValue(refPH, (snapshot) => {
+      const data = snapshot.val();
+      const registrosArray = data ? Object.entries(data).map(([id, registro]) => ({
+        id,
+        ...registro
+      })) : [];
+      
+      registrosArray.sort((a, b) => b.timestamp - a.timestamp);
+      setRegistrosPH(registrosArray);
     });
 
     return () => {
-      Object.entries(refs).forEach(([tipo, ref], index) => {
-        off(ref, 'value', listeners[index]);
-      });
+      off(refCloro, 'value', listenerCloro);
+      off(refPH, 'value', listenerPH);
     };
   }, []);
-
-  // Manejar inicio/fin de actividad
-  const manejarActividad = async (tipo) => {
-    if (rutasActivas[tipo]) {
-      await guardarRegistro(tipo, 'Finalizado', rutasActivas[tipo]);
-      setRutasActivas(prev => ({...prev, [tipo]: null}));
-    } else {
-      const registroId = await guardarRegistro(tipo, 'Iniciado');
-      if (registroId) {
-        setRutasActivas(prev => ({...prev, [tipo]: registroId}));
-      }
-    }
-  };
 
   const cerrarSesion = () => {
     localStorage.removeItem('nombreUsuario');
@@ -145,119 +186,243 @@ const AdmiRegistroVisitas = () => {
     return limpiarWatcher;
   }, []);
 
-  // Componente de tabla reutilizable
-  const TablaRegistros = ({ registros }) => (
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Operario</th>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Fecha</th>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora Inicio</th>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Ubicación Inicial</th>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora Final</th>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Ubicación Final</th>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Estado</th>
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {registros.map((registro) => (
-          <tr key={registro.id}>
-            <td className="px-4 py-2 text-sm">{registro.usuario}</td>
-            <td className="px-4 py-2 text-sm">{registro.fecha}</td>
-            <td className="px-4 py-2 text-sm">{registro.horaInicio}</td>
-            <td className="px-4 py-2 text-sm">
-              {registro.ubicacionInicial?.lat}, {registro.ubicacionInicial?.lng}
-            </td>
-            <td className="px-4 py-2 text-sm">{registro.horaFinal || '-'}</td>
-            <td className="px-4 py-2 text-sm">
-              {registro.ubicacionFinal ? `${registro.ubicacionFinal.lat}, ${registro.ubicacionFinal.lng}` : '-'}
-            </td>
-            <td className="px-4 py-2 text-sm">
-              <span className={`px-2 py-1 rounded-full text-xs ${
-                registro.estado === 'en_progreso' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-              }`}>
-                {registro.estado === 'en_progreso' ? 'En progreso' : 'Completado'}
-              </span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-
-  // Sección reutilizable
-  const SeccionRegistro = ({ tipo, nombre }) => (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <button
-        className="w-full p-4 bg-blue-500 text-white text-left font-bold flex justify-between items-center"
-        onClick={() => setSeccionActiva(seccionActiva === tipo ? null : tipo)}
+  // Componente para mostrar coordenadas con enlace a Google Maps
+  const UbicacionCell = ({ ubicacion }) => {
+    if (!ubicacion?.lat || !ubicacion?.lng || ubicacion.lat === 'N/A') return '-';
+    
+    return (
+      <a
+        href={`https://www.google.com/maps?q=${ubicacion.lat},${ubicacion.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-500 hover:underline"
+        title="Ver en Google Maps"
       >
-        <span>{nombre} {rutasActivas[tipo] && "(En progreso)"}</span>
-        <span>{seccionActiva === tipo ? '▲' : '▼'}</span>
-      </button>
-      
-      {seccionActiva === tipo && (
-        <div className="p-4 space-y-4">
-          <button
-            onClick={() => manejarActividad(tipo)}
-            className={`px-6 py-3 rounded-md font-bold text-white ${
-              rutasActivas[tipo] ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
-            }`}
-          >
-            {rutasActivas[tipo] ? `Finalizar ${nombre}` : `Iniciar ${nombre}`}
-          </button>
-          
-          <div className="overflow-x-auto">
-            <h3 className="font-bold mb-2">Historial {nombre}</h3>
-            {registros[tipo].length > 0 ? (
-              <TablaRegistros registros={registros[tipo]} />
-            ) : (
-              <p className="text-center text-gray-500 py-4">No hay registros para {nombre}</p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+        {ubicacion.lat}, {ubicacion.lng}
+      </a>
+    );
+  };
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      {/* Header */}
-      <header className="bg-blue-600 text-white p-4 rounded-lg shadow-md mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold">Registro de Visitas</h1>
-          <p className="text-sm">Usuario: {usuario}</p>
-        </div>
+  // Exportar a Excel
+  const exportarAExcel = (datos, nombreArchivo) => {
+    const datosFormateados = datos.map(registro => ({
+      'Operario': registro.usuario,
+      'Fecha': registro.fecha,
+      'Hora': registro.hora,
+      'Ubicación': registro.ubicacion.lat !== 'N/A' ? `${registro.ubicacion.lat}, ${registro.ubicacion.lng}` : 'N/A',
+      ...(registro.ph && { 'pH': registro.ph }),
+      ...(registro.cloro && { 'Cloro (ppm)': registro.cloro })
+    }));
+
+    const libro = XLSX.utils.book_new();
+    const hoja = XLSX.utils.json_to_sheet(datosFormateados);
+    XLSX.utils.book_append_sheet(libro, hoja, 'Registros');
+    XLSX.writeFile(libro, `${nombreArchivo}.xlsx`);
+  };
+
+  // Componente de tabla para registros de cloro
+  const TablaCloro = ({ registros }) => (
+    <div className="overflow-x-auto">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-bold text-lg">Historial de Aplicaciones</h3>
         <button 
-          onClick={cerrarSesion}
-          className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-sm"
+          onClick={() => exportarAExcel(registros, 'registros_cloro')}
+          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
         >
-          Cerrar sesión
+          Exportar a Excel
         </button>
-      </header>
-
-      {/* Sección de ubicación */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <h2 className="font-bold mb-2">Ubicación actual</h2>
-        {ubicacion ? (
-          <p className="text-sm">
-            Lat: {ubicacion.lat}, Lng: {ubicacion.lng} (Precisión: ±{ubicacion.precision}m)
-          </p>
-        ) : (
-          <p className="text-sm text-yellow-600">
-            {errorUbicacion || 'Obteniendo ubicación...'}
-          </p>
+      </div>
+      <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operario</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {registros.map((registro) => (
+              <tr key={registro.id}>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.usuario}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.fecha}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.hora}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm">
+                  <UbicacionCell ubicacion={registro.ubicacion} />
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <button 
+                    onClick={() => eliminarRegistroCloro(registro.id)}
+                    className="text-red-600 hover:text-red-900"
+                    title="Eliminar registro"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {registros.length === 0 && (
+          <div className="bg-white p-4 text-center text-gray-500">
+            No hay registros de aplicación de cloro
+          </div>
         )}
       </div>
+    </div>
+  );
 
-      {/* Secciones desplegables */}
-      <div className="space-y-4">
-        <SeccionRegistro tipo="bocatoma" nombre="Visita Bocatoma" />
-        <SeccionRegistro tipo="venecia" nombre="Recorrido Predios Venecia" />
-        <SeccionRegistro tipo="samaria" nombre="Recorrido Predios Samaria" />
+  // Componente de tabla para registros de pH y cloro
+  const TablaPHCloro = ({ registros }) => (
+    <div className="overflow-x-auto">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-bold text-lg">Historial de Mediciones</h3>
+        <button 
+          onClick={() => exportarAExcel(registros, 'registros_ph_cloro')}
+          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
+        >
+          Exportar a Excel
+        </button>
+      </div>
+      <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operario</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cloro (ppm)</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {registros.map((registro) => (
+              <tr key={registro.id}>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.usuario}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.ph}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.cloro}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.fecha}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{registro.hora}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm">
+                  <UbicacionCell ubicacion={registro.ubicacion} />
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <button 
+                    onClick={() => eliminarRegistroPHCloro(registro.id)}
+                    className="text-red-600 hover:text-red-900"
+                    title="Eliminar registro"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {registros.length === 0 && (
+          <div className="bg-white p-4 text-center text-gray-500">
+            No hay registros de pH y cloro
+          </div>
+        )}
       </div>
     </div>
   );
-};
 
-export default AdmiRegistroVisitas;
+ return (
+  <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+    {/* Overlay para móviles */}
+    {menuAbierto && (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+        onClick={() => setMenuAbierto(false)}
+      ></div>
+    )}
+
+    {/* Sidebar */}
+    <aside className={`fixed md:sticky top-0 z-30 md:z-0 w-64 bg-white shadow-md p-4 transform transition-transform duration-300 ease-in-out h-screen md:h-auto ${
+      menuAbierto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    }`}>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">Admin</h2>
+        <button 
+          className="md:hidden text-gray-500 text-xl"
+          onClick={() => setMenuAbierto(false)}
+        >
+          ×
+        </button>
+      </div>
+      <nav className="space-y-2">
+        <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
+        <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
+        <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
+        <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
+        <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
+        <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
+        <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
+        <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
+        <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
+        <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
+        <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
+      </nav>
+    </aside>
+
+    {/* Contenido principal */}
+    <main className="flex-1 p-4 md:p-6">
+      {/* Mobile menu button */}
+      <button 
+        className="md:hidden fixed top-4 left-4 z-40 bg-blue-600 text-white p-2 rounded-full shadow-lg"
+        onClick={() => setMenuAbierto(!menuAbierto)}
+      >
+        {menuAbierto ? '✕' : '☰'}
+      </button>
+
+      <div className="max-w-6xl mx-auto">
+        <header className="bg-blue-600 text-white p-4 rounded-lg shadow-md mb-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              
+              <h1 className="text-xl font-bold">Registro de Cloro y pH</h1>
+            </div> 
+          </div>
+        </header>
+
+        {/* Navegación entre secciones */}
+        <div className="flex mb-6 border-b border-gray-200 overflow-x-auto">
+          <button
+            className={`py-3 px-6 font-medium whitespace-nowrap ${seccionActiva === 'aplicacion' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setSeccionActiva('aplicacion')}
+          >
+            Aplicación de Cloro
+          </button>
+          <button
+            className={`py-3 px-6 font-medium whitespace-nowrap ${seccionActiva === 'phcloro' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setSeccionActiva('phcloro')}
+          >
+            Registro de pH y Cloro
+          </button>
+        </div>
+
+        {/* Sección de Aplicación de Cloro */}
+        {seccionActiva === 'aplicacion' && (
+          <div className="bg-white rounded-lg shadow overflow-hidden p-6 space-y-6">
+            <TablaCloro registros={registrosCloro} />
+          </div>
+        )}
+
+        {/* Sección de Registro de pH y Cloro */}
+        {seccionActiva === 'phcloro' && (
+          <div className="bg-white rounded-lg shadow overflow-hidden p-6 space-y-6">
+            <TablaPHCloro registros={registrosPH} />
+          </div>
+        )}
+      </div>
+    </main>
+  </div>
+);
+}
+
+export default AdmiRegistroCloroPH;

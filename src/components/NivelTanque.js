@@ -9,6 +9,7 @@ function NivelTanque() {
   const [registros, setRegistros] = useState([]);
   const [mensaje, setMensaje] = useState("");
   const [filtroUsuario, setFiltroUsuario] = useState("Todos");
+   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const db = getDatabase(app);
 
@@ -79,18 +80,40 @@ function NivelTanque() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg p-6 flex-shrink-0">
-        <h2 className="text-2xl font-bold text-blue-700 mb-8">Admin</h2>
-        <nav className="space-y-4">
-          <a href="/Muestras" className="block text-gray-700 hover:text-blue-600">Muestras Calidad</a>
-          <a href="/NivelTanque" className="block text-gray-700 hover:text-blue-600">Nivel de Tanque</a>
-          <a href="/AdmiOrden" className="block text-gray-700 hover:text-blue-600">Órdenes Reparación</a>
-          <a href="/Macros" className="block text-gray-700 hover:text-blue-600">Lecturas Macro</a>
+    <div className="flex min-h-screen bg-gray-100">
+      {/* Overlay para móviles cuando el menú está abierto */}
+      {menuAbierto && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={() => setMenuAbierto(false)}
+        ></div>
+      )}
+
+      {/* Sidebar mejorado */}
+      <aside className={`fixed md:relative z-30 md:z-0 w-64 bg-white shadow-md p-4 transform transition-transform duration-300 ease-in-out h-screen ${
+        menuAbierto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-blue-600">Admin</h2>
+          <button 
+            className="md:hidden text-gray-500 text-xl"
+            onClick={() => setMenuAbierto(false)}
+          >
+            ×
+          </button>
+        </div>
+        <nav className="space-y-2">
+          <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
+          <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
+          <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
+          <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
+          <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
+          <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
+          <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
+          <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
+          <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
         </nav>
       </aside>
-
       {/* Contenido principal */}
       <main className="flex-1 p-8 overflow-auto">
         <div className="max-w-4xl mx-auto bg-white shadow rounded-lg p-6">

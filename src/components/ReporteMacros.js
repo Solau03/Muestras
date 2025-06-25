@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import app from "../FirebaseConfiguration";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { saveAs } from "file-saver";
-import * as XLSX from "xlsx";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const COLORS_MACROS = {
   "Macro 8\" - Entrada Planta": "#8884d8",
@@ -15,9 +15,10 @@ const COLORS_MACROS = {
 function ReporteMacros() {
   const [datos, setDatos] = useState([]);
   const [macroSeleccionado, setMacroSeleccionado] = useState("Macro 8\" - Entrada Planta");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+  const [fechaInicio, setFechaInicio] = useState(null);
+  const [fechaFin, setFechaFin] = useState(null);
   const [tipoReporte, setTipoReporte] = useState("individual");
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const macrosDisponibles = [
     "Macro 8\" - Entrada Planta",
@@ -57,7 +58,7 @@ function ReporteMacros() {
 
   // Función de filtrado por fechas
   const filtrarPorFecha = (datosAFiltrar = datos) => {
-    if (!fechaInicio && !fechaFin) return datosAFiltrar;
+    if (!fechaInicio && !fechaFin) return [];
     
     const inicio = fechaInicio ? new Date(fechaInicio) : null;
     const fin = fechaFin ? new Date(fechaFin) : null;
@@ -112,44 +113,6 @@ function ReporteMacros() {
     }
   };
 
-  // Exportar a Excel con datos diarios
-  const exportarAExcel = () => {
-    let datosExportar;
-    let nombreArchivo;
-    
-    if (tipoReporte === "individual") {
-      datosExportar = prepararDatosDiarios(filtrarPorMacroYFecha());
-      nombreArchivo = `Reporte_Diario_${macroSeleccionado.replace(/"/g, '')}.xlsx`;
-    } else {
-      datosExportar = prepararDatosDiarios(filtrarPorFecha(), true);
-      nombreArchivo = `Reporte_Diario_Conjunto_Macros.xlsx`;
-    }
-
-    // Formatear datos para Excel
-    const datosFormateados = datosExportar.map(item => {
-      if (tipoReporte === "individual") {
-        return {
-          Fecha: item.fechaMostrar,
-          'Lectura (m³/día)': item.lectura,
-          Macro: item.macro
-        };
-      } else {
-        const registro = { Fecha: item.fechaMostrar };
-        macrosDisponibles.forEach(macro => {
-          registro[macro] = item[macro] || '';
-        });
-        return registro;
-      }
-    });
-
-    const hoja = XLSX.utils.json_to_sheet(datosFormateados);
-    const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, "DatosDiarios");
-    const excelBuffer = XLSX.write(libro, { bookType: "xlsx", type: "array" });
-    const archivo = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(archivo, nombreArchivo);
-  };
-
   const datosFiltrados = tipoReporte === "individual" ? filtrarPorMacroYFecha() : filtrarPorFecha();
   const datosParaGrafico = prepararDatosDiarios(datosFiltrados, tipoReporte === "conjunto");
 
@@ -175,173 +138,223 @@ function ReporteMacros() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-green-100 to-blue-100">
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+      {/* Overlay para móviles */}
+      {menuAbierto && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={() => setMenuAbierto(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md p-4">
-        <h2 className="text-2xl font-bold text-blue-600 mb-6">Admin</h2>
-        <nav className="space-y-4">
-          <a href="/Admi" className="block text-gray-700 hover:text-blue-600">Usuarios </a>
-          <a href="/Muestras" className="block text-gray-700 hover:text-blue-600">Muestras Calidad</a>
-          <a href="/Muestrasreportes" className="block text-gray-700 hover:text-blue-600">Reportes calidad</a>
-          <a href="/AdmiOrden" className="block text-gray-700 hover:text-blue-600">Órdenes Reparación</a>
-          <a href="/Macros" className="block text-gray-700 hover:text-red-500">Lecturas Macro</a>
-          <a href="/ReporteMacros" className="block text-gray-700 hover:text-red-500">Reportes Macro</a>
-        </nav>
+      <aside className={`fixed md:sticky top-0 z-30 md:z-0 w-64 bg-white shadow-md p-4 transform transition-transform duration-300 ease-in-out h-screen md:h-auto ${
+        menuAbierto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-blue-600">Admin</h2>
+          <button 
+            className="md:hidden text-gray-500 text-xl"
+            onClick={() => setMenuAbierto(false)}
+          >
+            ×
+          </button>
+        </div>
+        <nav className="space-y-2">
+        <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
+        <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
+        <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
+        <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
+        <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
+        <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
+        <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
+        <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
+        <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
+        <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
+        <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
+      </nav>
       </aside>
 
-      {/* Contenido derecho */}
-      <div className="flex-1 p-8 overflow-auto">
-        <div className="w-full max-w-5xl mx-auto">
-          {/* Título */}
-          <h2 className="text-2xl font-bold mb-6 text-center text-green-800">
-            {tipoReporte === "individual"
-              ? `Reporte Diario de Lecturas para ${macroSeleccionado}`
-              : "Reporte Diario Conjunto de Todos los Macros"}
-          </h2>
+      {/* Contenido principal */}
+      <main className="flex-1 p-4 md:p-6">
+        {/* Mobile menu button */}
+        <button 
+          className="md:hidden fixed top-4 left-4 z-40 bg-blue-600 text-white p-2 rounded-full shadow-lg"
+          onClick={() => setMenuAbierto(!menuAbierto)}
+        >
+          {menuAbierto ? '✕' : '☰'}
+        </button>
 
-          {/* Filtros */}
-          <div className="grid md:grid-cols-5 gap-4 mb-6">
-            <select
-              value={tipoReporte}
-              onChange={(e) => setTipoReporte(e.target.value)}
-              className="p-2 border rounded"
-            >
-              <option value="individual">Reporte Individual</option>
-              <option value="conjunto">Reporte Conjunto</option>
-            </select>
+        <div className="max-w-6xl mx-auto">
+          <div className="w-full max-w-5xl mx-auto">
+            {/* Título */}
+            <h2 className="text-2xl font-bold mb-6 text-center text-green-800">
+              {tipoReporte === "individual"
+                ? `Reporte Diario de Lecturas para ${macroSeleccionado}`
+                : "Reporte Diario Conjunto de Todos los Macros"}
+            </h2>
 
-            {tipoReporte === "individual" && (
+            {/* Filtros */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <select
-                value={macroSeleccionado}
-                onChange={(e) => setMacroSeleccionado(e.target.value)}
+                value={tipoReporte}
+                onChange={(e) => setTipoReporte(e.target.value)}
                 className="p-2 border rounded"
               >
-                {macrosDisponibles.map(macro => (
-                  <option key={macro} value={macro}>{macro}</option>
-                ))}
+                <option value="individual">Reporte Individual</option>
+                <option value="conjunto">Reporte Conjunto</option>
               </select>
-            )}
 
-            <input
-              type="date"
-              value={fechaInicio}
-              onChange={(e) => setFechaInicio(e.target.value)}
-              className="p-2 border rounded"
-              placeholder="Fecha inicio"
-            />
-            <input
-              type="date"
-              value={fechaFin}
-              onChange={(e) => setFechaFin(e.target.value)}
-              className="p-2 border rounded"
-              placeholder="Fecha fin"
-            />
-            <button
-              onClick={exportarAExcel}
-              className="bg-green-600 text-white p-2 rounded hover:bg-green-700"
-            >
-              Exportar a Excel
-            </button>
-          </div>
+              {tipoReporte === "individual" && (
+                <select
+                  value={macroSeleccionado}
+                  onChange={(e) => setMacroSeleccionado(e.target.value)}
+                  className="p-2 border rounded"
+                >
+                  {macrosDisponibles.map(macro => (
+                    <option key={macro} value={macro}>{macro}</option>
+                  ))}
+                </select>
+              )}
 
-          {/* Gráfico */}
-          {datosFiltrados.length > 0 ? (
-            <>
-              <div className="bg-white p-4 rounded-lg shadow mb-6">
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart
-                    data={datosParaGrafico}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="fechaMostrar" 
-                      tickFormatter={(value) => {
-                        // Mostrar formato corto de fecha (dd/mm)
-                        const parts = value.split('/');
-                        return parts.length === 3 ? `${parts[0]}/${parts[1]}` : value;
-                      }}
-                    />
-                    <YAxis label={{ value: 'm³/día', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip 
-                      formatter={(value) => [`${value} m³/día`, 'Lectura']}
-                      labelFormatter={(label) => `Fecha: ${label}`}
-                    />
-                    <Legend />
-                    {tipoReporte === "conjunto" ? (
-                      macrosDisponibles.map(macro => (
-                        <Line
-                          key={macro}
-                          type="monotone"
-                          dataKey={macro}
-                          stroke={COLORS_MACROS[macro]}
-                          activeDot={{ r: 8 }}
-                        />
-                      ))
-                    ) : (
-                      <Line
-                        type="monotone"
-                        dataKey="lectura"
-                        stroke={COLORS_MACROS[macroSeleccionado]}
-                        name={macroSeleccionado}
-                        activeDot={{ r: 8 }}
-                      />
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-500 mb-1">Fecha inicio</label>
+                <DatePicker
+                  selected={fechaInicio}
+                  onChange={(date) => setFechaInicio(date)}
+                  selectsStart
+                  startDate={fechaInicio}
+                  endDate={fechaFin}
+                  placeholderText="Seleccione fecha"
+                  className="p-2 border rounded w-full"
+                  dateFormat="dd/MM/yyyy"
+                  isClearable
+                />
               </div>
 
-              {/* Estadísticas */}
-              <div className="mt-6">
-                {tipoReporte === "individual" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                    <div className="p-4 bg-gray-100 rounded shadow">
-                      <p className="text-gray-500">📉 Mínimo</p>
-                      <p className="text-lg font-bold">{calcularEstadisticas().min} m³/día</p>
-                    </div>
-                    <div className="p-4 bg-gray-100 rounded shadow">
-                      <p className="text-gray-500">📈 Máximo</p>
-                      <p className="text-lg font-bold">{calcularEstadisticas().max} m³/día</p>
-                    </div>
-                    <div className="p-4 bg-gray-100 rounded shadow">
-                      <p className="text-gray-500">➗ Promedio</p>
-                      <p className="text-lg font-bold">{calcularEstadisticas().avg} m³/día</p>
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-500 mb-1">Fecha fin</label>
+                <DatePicker
+                  selected={fechaFin}
+                  onChange={(date) => setFechaFin(date)}
+                  selectsEnd
+                  startDate={fechaInicio}
+                  endDate={fechaFin}
+                  minDate={fechaInicio}
+                  placeholderText="Seleccione fecha"
+                  className="p-2 border rounded w-full"
+                  dateFormat="dd/MM/yyyy"
+                  isClearable
+                />
+              </div>
+            </div>
+
+            {/* Gráfico y estadísticas solo si hay fechas seleccionadas */}
+            {(fechaInicio || fechaFin) ? (
+              datosFiltrados.length > 0 ? (
+                <>
+                  <div className="bg-white p-4 rounded-lg shadow mb-6">
+                    <div className="h-64 sm:h-80 md:h-96">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={datosParaGrafico}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="fechaMostrar" 
+                            tickFormatter={(value) => {
+                              const parts = value.split('/');
+                              return parts.length === 3 ? `${parts[0]}/${parts[1]}` : value;
+                            }}
+                          />
+                          <YAxis label={{ value: 'm³/día', angle: -90, position: 'insideLeft' }} />
+                          <Tooltip 
+                            formatter={(value) => [`${value} m³/día`, 'Lectura']}
+                            labelFormatter={(label) => `Fecha: ${label}`}
+                          />
+                          <Legend />
+                          {tipoReporte === "conjunto" ? (
+                            macrosDisponibles.map(macro => (
+                              <Line
+                                key={macro}
+                                type="monotone"
+                                dataKey={macro}
+                                stroke={COLORS_MACROS[macro]}
+                                activeDot={{ r: 8 }}
+                              />
+                            ))
+                          ) : (
+                            <Line
+                              type="monotone"
+                              dataKey="lectura"
+                              stroke={COLORS_MACROS[macroSeleccionado]}
+                              name={macroSeleccionado}
+                              activeDot={{ r: 8 }}
+                            />
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {macrosDisponibles.map(macro => (
-                      <div key={macro} className="p-4 bg-gray-100 rounded shadow">
-                        <h3 className="font-bold text-center mb-2">{macro}</h3>
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          <div>
-                            <p className="text-gray-500">Mín</p>
-                            <p className="font-semibold">{calcularEstadisticas(macro).min} m³/día</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Máx</p>
-                            <p className="font-semibold">{calcularEstadisticas(macro).max} m³/día</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Prom</p>
-                            <p className="font-semibold">{calcularEstadisticas(macro).avg} m³/día</p>
-                          </div>
+
+                  {/* Estadísticas */}
+                  <div className="mt-6">
+                    {tipoReporte === "individual" ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                        <div className="p-4 bg-gray-100 rounded shadow">
+                          <p className="text-gray-500">📉 Mínimo</p>
+                          <p className="text-lg font-bold">{calcularEstadisticas().min} m³/día</p>
+                        </div>
+                        <div className="p-4 bg-gray-100 rounded shadow">
+                          <p className="text-gray-500">📈 Máximo</p>
+                          <p className="text-lg font-bold">{calcularEstadisticas().max} m³/día</p>
+                        </div>
+                        <div className="p-4 bg-gray-100 rounded shadow">
+                          <p className="text-gray-500">➗ Promedio</p>
+                          <p className="text-lg font-bold">{calcularEstadisticas().avg} m³/día</p>
                         </div>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {macrosDisponibles.map(macro => (
+                          <div key={macro} className="p-4 bg-gray-100 rounded shadow">
+                            <h3 className="font-bold text-center mb-2 text-sm sm:text-base">{macro}</h3>
+                            <div className="grid grid-cols-3 gap-2 text-sm">
+                              <div>
+                                <p className="text-gray-500">Mín</p>
+                                <p className="font-semibold">{calcularEstadisticas(macro).min} m³/día</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Máx</p>
+                                <p className="font-semibold">{calcularEstadisticas(macro).max} m³/día</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Prom</p>
+                                <p className="font-semibold">{calcularEstadisticas(macro).avg} m³/día</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                </>
+              ) : (
+                <p className="text-center mt-6 text-gray-500">
+                  No hay datos disponibles para el rango de fechas seleccionado
+                </p>
+              )
+            ) : (
+              <div className="text-center p-8 bg-white rounded-lg shadow">
+                <p className="text-gray-500 text-lg">
+                  Seleccione un rango de fechas para visualizar los datos
+                </p>
               </div>
-            </>
-          ) : (
-            <p className="text-center mt-6 text-gray-500">
-              {datos.length === 0
-                ? "No hay datos registrados en la base de datos"
-                : "No hay datos disponibles para el filtro seleccionado"}
-            </p>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

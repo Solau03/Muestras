@@ -21,6 +21,10 @@ import AdmiRegistroVisitas from "./components/AdmiManzano.js";
 import ReportesManzano from "./components/ReportesManzano.js";
 import BocDashboard from "./components/Boc.js";
 import VisualizacionRegistros from "./components/AdmiBocatoma.js";
+import AdmiRegistroCloroPH from "./components/AdmiManzano.js";
+import AdmiNivelTanque from "./components/AdmiTanque.js";
+import ReportesNivelTanque from "./components/ReporteTanque.js";
+
 function App() {
   return (
     <Router>
@@ -42,10 +46,12 @@ function App() {
         <Route path="/OperarioNivelTanque" element={<OpeNivelTanque />} />
         <Route path="/Bocatoma" element={<RegistroVisitas />} />
          <Route path="/Manzano" element={<RegistroCloroPH />} />
-         <Route path="/AdmiRegistroVisitas" element={<AdmiRegistroVisitas />} />
+         <Route path="/AdmiManzano" element={<AdmiRegistroCloroPH />} />
          <Route path="/ReportesManzano" element={<ReportesManzano />} />
          <Route path="/BocatomaDashboard" element={<BocDashboard />} />
          <Route path="/AdmiBocatoma" element={<VisualizacionRegistros />} />
+         <Route path="/AdmiTanque" element={<AdmiNivelTanque />} />
+         <Route path="/ReporteTanque" element={<ReportesNivelTanque />} />
       </Routes>
     </Router>
   );

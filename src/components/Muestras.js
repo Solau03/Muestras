@@ -13,6 +13,15 @@ function Muestras() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [muestraAEliminar, setMuestraAEliminar] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // Estados para manejar errores de validación
+  const [errores, setErrores] = useState({
+    turbiedad: false,
+    ph: false,
+    color: false,
+    cloro: false,
+    formato: false
+  });
 
   const db = getDatabase(app);
 
@@ -24,11 +33,10 @@ function Muestras() {
       const unsubscribe = onValue(muestrasRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-          // Convertir objeto a array manteniendo el ID
           const lista = Object.entries(data).map(([id, muestra]) => ({
             id,
             ...muestra
-          })).reverse(); // Para mostrar las más recientes arriba
+          })).reverse();
           setMuestras(lista);
         } else {
           setMuestras([]);
@@ -42,39 +50,34 @@ function Muestras() {
     cargarMuestras();
   }, [db]);
 
-  const guardarDatos = async () => {
-    const nombreUsuario = localStorage.getItem("nombreUsuario") || "Desconocido";
-    const fecha = new Date().toLocaleDateString();
-    const hora = new Date().toLocaleTimeString();
-
-    // Validar que los campos sean números válidos
+  const validarDatos = () => {
     const phNum = parseFloat(ph);
     const turbNum = parseFloat(turbiedad);
     const colorNum = parseFloat(color);
     const cloroNum = parseFloat(cloro);
 
-    if (isNaN(phNum) || isNaN(turbNum) || isNaN(colorNum) || isNaN(cloroNum)) {
-      alert("Todos los campos deben ser números válidos.");
+    const nuevosErrores = {
+      turbiedad: isNaN(turbNum) || turbNum > 2,
+      ph: isNaN(phNum) || phNum < 6.5 || phNum > 9,
+      color: isNaN(colorNum) || colorNum > 15,
+      cloro: isNaN(cloroNum) || cloroNum < 0.3 || cloroNum > 2.0,
+      formato: isNaN(phNum) || isNaN(turbNum) || isNaN(colorNum) || isNaN(cloroNum)
+    };
+
+    setErrores(nuevosErrores);
+    
+    // Retorna true si no hay errores
+    return !Object.values(nuevosErrores).some(error => error);
+  };
+
+  const guardarDatos = async () => {
+    if (!validarDatos()) {
       return;
     }
 
-    // Validaciones de rangos
-    if (!(phNum >= 6.5 && phNum <= 9)) {
-      alert("El pH debe estar entre 6.5 y 9.");
-      return;
-    }
-    if (!(turbNum <= 2)) {
-      alert("La turbiedad debe ser menor o igual a 2.");
-      return;
-    }
-    if (!(colorNum <= 15)) {
-      alert("El color debe ser menor o igual a 15.");
-      return;
-    }
-    if (!(cloroNum >= 0.3 && cloroNum <= 2.0)) {
-      alert("El cloro debe estar entre 0.3 y 2.0.");
-      return;
-    }
+    const nombreUsuario = localStorage.getItem("nombreUsuario") || "Desconocido";
+    const fecha = new Date().toLocaleDateString();
+    const hora = new Date().toLocaleTimeString();
 
     const newDocRef = push(ref(db, "muestras/muestras"));
 
@@ -93,6 +96,13 @@ function Muestras() {
         setPh("");
         setColor("");
         setCloro("");
+        setErrores({
+          turbiedad: false,
+          ph: false,
+          color: false,
+          cloro: false,
+          formato: false
+        });
       })
       .catch((error) => {
         alert("Error: " + error.message);
@@ -131,115 +141,129 @@ function Muestras() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-white-100 to-white-100">
-      {/* Overlay para móviles cuando el menú está abierto */}
-      {menuAbierto && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
-          onClick={() => setMenuAbierto(false)}
-        ></div>
-      )}
-
-      {/* Sidebar - Ahora con animación y control de visibilidad */}
-      <aside className={`fixed md:relative z-30 md:z-0 w-64 bg-green-600 shadow-md p-4 transform transition-transform duration-300 ease-in-out ${
-        menuAbierto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}>
-        <h2 className="text-2xl font-bold text-white mb-6">Admin</h2>
-        <nav className="space-y-4">
-          <a href="/Admi" className="block text-white hover:text-blue-200">Usuarios</a>
-          <a href="/Muestras" className="block text-white hover:text-blue-200 font-semibold">Muestras Calidad</a>
-          <a href="/Muestrasreportes" className="block text-white hover:text-blue-200">Reportes calidad</a>
-          <a href="/AdmiOrden" className="block text-white hover:text-blue-200">Órdenes Reparación</a>
-          <a href="/Macros" className="block text-white hover:text-red-200">Lecturas Macro</a>
-          <a href="/ReporteMacros" className="block text-white hover:text-red-200">Reportes Macro</a>
-        </nav>
+     <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+      {/* Sidebar (similar al que tienes en AdmiNivelTanque) */}
+      <aside className={`fixed md:sticky top-0 z-30 md:z-0 w-64 bg-white shadow-md p-4 h-screen md:h-auto`}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-blue-600">Reportes</h2>
+        </div>
+        <nav className="space-y-2">
+        <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
+        <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
+        <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
+        <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
+        <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
+        <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
+        <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
+        <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
+        <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
+        <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
+        <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
+      </nav>
       </aside>
 
       {/* Contenido principal */}
-      <div className="flex-1 p-4 md:p-8 overflow-auto relative">
-        {/* Mobile menu button */}
-        <button 
-          className="md:hidden fixed top-4 left-4 z-40 bg-green-600 text-white p-2 rounded-full shadow-lg"
-          onClick={() => setMenuAbierto(!menuAbierto)}
-        >
-          {menuAbierto ? '✕' : '☰'}
-        </button>
+      <main className="flex-1 p-4 md:p-6">
+        <div className="max-w-6xl mx-auto">
+  <div className="p-6 text-center">
+    <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800">Registro de Muestras</h2>
+    <p className="mt-2 text-sm text-green-600">Ingrese los parámetros de calidad del agua</p>
+  </div>
+</div>
 
-        {/* Encabezado */}
-        <div className="text-center mb-8 mt-12 md:mt-0">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800">Registro de Muestras</h2>
-          <p className="mt-2 text-sm text-blue-700">Ingrese los parámetros de calidad del agua</p>
-        </div>
-
-        {/* Formulario */}
-        <div className="bg-white shadow rounded-lg p-4 md:p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div>
-              <label htmlFor="turbiedad" className="block text-sm font-medium text-gray-700 mb-1">Turbiedad</label>
+        {/* Formulario mejorado */}
+        <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Nueva Muestra</h3>
+          
+          {errores.formato && (
+            <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700">
+              <p>Todos los campos deben ser números válidos.</p>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <label htmlFor="turbiedad" className="block text-sm font-medium text-gray-700">Turbiedad (NTU)</label>
               <input
-                type="text"
+                type="number"
+                step="0.1"
                 id="turbiedad"
-                placeholder="Ej: 2.5 NTU"
+                placeholder="Ej: 1.5"
                 value={turbiedad}
                 onChange={(e) => setTurbiedad(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-4 py-2 border ${errores.turbiedad ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition`}
               />
+              <p className={`text-xs ${errores.turbiedad ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                Máximo permitido: 2 NTU
+              </p>
             </div>
             
-            <div>
-              <label htmlFor="ph" className="block text-sm font-medium text-gray-700 mb-1">pH</label>
+            <div className="space-y-1">
+              <label htmlFor="ph" className="block text-sm font-medium text-gray-700">pH</label>
               <input
-                type="text"
+                type="number"
+                step="0.1"
                 id="ph"
                 placeholder="Ej: 7.2"
                 value={ph}
                 onChange={(e) => setPh(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-4 py-2 border ${errores.ph ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition`}
               />
+              <p className={`text-xs ${errores.ph ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                Rango permitido: 6.5 - 9
+              </p>
             </div>
             
-            <div>
-              <label htmlFor="cloro" className="block text-sm font-medium text-gray-700 mb-1">Cloro</label>
+            <div className="space-y-1">
+              <label htmlFor="cloro" className="block text-sm font-medium text-gray-700">Cloro (mg/L)</label>
               <input
-                type="text"
+                type="number"
+                step="0.1"
                 id="cloro"
-                placeholder="Ej: 1.8 mg/L"
+                placeholder="Ej: 1.2"
                 value={cloro}
                 onChange={(e) => setCloro(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-4 py-2 border ${errores.cloro ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition`}
               />
+              <p className={`text-xs ${errores.cloro ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                Rango permitido: 0.3 - 2.0 mg/L
+              </p>
             </div>
             
-            <div>
-              <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+            <div className="space-y-1">
+              <label htmlFor="color" className="block text-sm font-medium text-gray-700">Color (UC)</label>
               <input
-                type="text"
+                type="number"
+                step="1"
                 id="color"
-                placeholder="Ej: 10 UC"
+                placeholder="Ej: 10"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-4 py-2 border ${errores.color ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition`}
               />
+              <p className={`text-xs ${errores.color ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                Máximo permitido: 15 UC
+              </p>
             </div>
           </div>
           
-          <div className="mt-6">
+          <div className="mt-6 flex justify-end">
             <button
               onClick={guardarDatos}
-              className="w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors shadow-md"
             >
-              Guardar Datos
+              Guardar Muestra
             </button>
           </div>
         </div>
 
-        {/* Tabla de muestras y botón de exportación */}
-        <div className="bg-white shadow rounded-lg overflow-hidden mb-4">
-          <div className="flex flex-col md:flex-row justify-between items-center px-4 md:px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 mb-2 md:mb-0">Muestras registradas</h3>
+        {/* Tabla de muestras mejorada */}
+        <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
+          <div className="flex flex-col md:flex-row justify-between items-center px-6 py-4 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-800 mb-2 md:mb-0">Historial de Muestras</h3>
             <button
               onClick={exportToExcel}
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+              className={`px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow ${muestras.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={muestras.length === 0}
             >
               Exportar a Excel
@@ -248,41 +272,43 @@ function Muestras() {
           
           {loading ? (
             <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-                    <th scope="col" className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turbiedad</th>
-                    <th scope="col" className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
-                    <th scope="col" className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cloro</th>
-                    <th scope="col" className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                    <th scope="col" className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha/Hora</th>
-                    <th scope="col" className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turbiedad</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cloro</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha/Hora</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {muestras.length > 0 ? (
                     muestras.map((muestra) => (
-                      <tr key={muestra.id} className="hover:bg-gray-50">
-                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{muestra.nombreUsuario}</td>
-                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Turbiedad}</td>
-                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Ph}</td>
-                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Cloro}</td>
-                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Color}</td>
-                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div>{muestra.Fecha}</div>
+                      <tr key={muestra.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{muestra.nombreUsuario}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Turbiedad} NTU</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Ph}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Cloro} mg/L</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Color} UC</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="font-medium">{muestra.Fecha}</div>
                           <div className="text-xs text-gray-400">{muestra.Hora}</div>
                         </td>
-                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <button
                             onClick={() => setMuestraAEliminar(muestra)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Eliminar muestra"
+                            className="text-red-600 hover:text-red-900 font-medium flex items-center"
                           >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                             Eliminar
                           </button>
                         </td>
@@ -301,40 +327,56 @@ function Muestras() {
           )}
         </div>
 
-        {/* Modal de confirmación para eliminar */}
+        {/* Modal de confirmación mejorado */}
         {muestraAEliminar && (
           <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 z-50 p-4">
-            <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
-              <h3 className="text-lg font-semibold mb-4">Confirmar eliminación</h3>
-              <p className="mb-4">¿Estás seguro de eliminar la muestra del usuario <strong>{muestraAEliminar.nombreUsuario}</strong>?</p>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <div className="font-medium">Turbiedad:</div>
-                <div>{muestraAEliminar.Turbiedad} NTU</div>
-                <div className="font-medium">pH:</div>
-                <div>{muestraAEliminar.Ph}</div>
-                <div className="font-medium">Cloro:</div>
-                <div>{muestraAEliminar.Cloro} mg/L</div>
-                <div className="font-medium">Color:</div>
-                <div>{muestraAEliminar.Color} UC</div>
+            <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Confirmar eliminación</h3>
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                <p className="text-red-700">¿Estás seguro de eliminar esta muestra?</p>
               </div>
-              <div className="flex justify-end space-x-3 mt-4">
+              
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="font-medium text-gray-700">Usuario:</div>
+                <div className="text-gray-900">{muestraAEliminar.nombreUsuario}</div>
+                
+                <div className="font-medium text-gray-700">Turbiedad:</div>
+                <div className="text-gray-900">{muestraAEliminar.Turbiedad} NTU</div>
+                
+                <div className="font-medium text-gray-700">pH:</div>
+                <div className="text-gray-900">{muestraAEliminar.Ph}</div>
+                
+                <div className="font-medium text-gray-700">Cloro:</div>
+                <div className="text-gray-900">{muestraAEliminar.Cloro} mg/L</div>
+                
+                <div className="font-medium text-gray-700">Color:</div>
+                <div className="text-gray-900">{muestraAEliminar.Color} UC</div>
+                
+                <div className="font-medium text-gray-700">Fecha:</div>
+                <div className="text-gray-900">{muestraAEliminar.Fecha} {muestraAEliminar.Hora}</div>
+              </div>
+              
+              <div className="flex justify-end space-x-4">
                 <button
                   onClick={() => setMuestraAEliminar(null)}
-                  className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded"
+                  className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={() => eliminarMuestra(muestraAEliminar.id)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
+                  className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center"
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
                   Eliminar
                 </button>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
