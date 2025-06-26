@@ -11,6 +11,10 @@ function MacroLecturas() {
   const [filtroMacro, setFiltroMacro] = useState("Todos");
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Estados para la paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [registrosPorPagina] = useState(10);
 
   const db = getDatabase(app);
 
@@ -22,6 +26,7 @@ function MacroLecturas() {
       if (data) {
         const lista = Object.entries(data).map(([id, lectura]) => ({ id, ...lectura }));
         setLecturas(lista.reverse()); // Más recientes primero
+        setPaginaActual(1); // Resetear a la primera página al cargar nuevos datos
       } else {
         setLecturas([]);
       }
@@ -86,9 +91,22 @@ function MacroLecturas() {
     return lecturas.filter(l => l.tipoMacro === filtroMacro);
   }, [lecturas, filtroMacro]);
 
+  // Cálculos para paginación
+  const totalPaginas = Math.ceil(lecturasFiltradas.length / registrosPorPagina);
+  const registrosPaginaActual = useMemo(() => {
+    const inicio = (paginaActual - 1) * registrosPorPagina;
+    const fin = inicio + registrosPorPagina;
+    return lecturasFiltradas.slice(inicio, fin);
+  }, [lecturasFiltradas, paginaActual, registrosPorPagina]);
+
+  // Cambiar de página
+  const cambiarPagina = (numeroPagina) => {
+    setPaginaActual(numeroPagina);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Función para exportar a Excel
   const exportToExcel = () => {
-    // Preparar los datos para exportar
     const dataToExport = lecturasFiltradas.map(lectura => ({
       "Operario": lectura.usuario,
       "Fecha": lectura.fecha,
@@ -97,18 +115,11 @@ function MacroLecturas() {
       "Lectura (m³/día)": lectura.lectura
     }));
 
-    // Crear hoja de trabajo
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
-    // Crear libro de trabajo
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "LecturasMacro");
-    
-    // Generar archivo Excel
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-    
-    // Descargar archivo
     saveAs(data, `LecturasMacro_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
@@ -136,18 +147,17 @@ function MacroLecturas() {
           </button>
         </div>
         <nav className="space-y-2">
-        <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
-        <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
-        <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
-        <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
-        <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
-        <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
-        <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
-        <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
-        <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
-        <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
-        <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
-      </nav>
+          <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
+          <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
+          <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
+          <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
+          <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
+          <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
+          <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
+          <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
+          <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
+          <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
+        </nav>
       </aside>
 
       {/* Contenido principal */}
@@ -210,7 +220,10 @@ function MacroLecturas() {
                 </label>
                 <select
                   value={filtroMacro}
-                  onChange={e => setFiltroMacro(e.target.value)}
+                  onChange={e => {
+                    setFiltroMacro(e.target.value);
+                    setPaginaActual(1); // Resetear a la primera página al cambiar filtro
+                  }}
                   className="w-full p-2 border rounded"
                 >
                   <option>Todos</option>
@@ -232,7 +245,7 @@ function MacroLecturas() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold">Historial de Lecturas</h3>
               <span className="text-sm text-gray-500">
-                {lecturasFiltradas.length} registros encontrados
+                Mostrando {registrosPaginaActual.length} de {lecturasFiltradas.length} registros
               </span>
             </div>
             <div className="overflow-x-auto">
@@ -248,8 +261,8 @@ function MacroLecturas() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lecturasFiltradas.length > 0 ? (
-                    lecturasFiltradas.map((l, idx) => (
+                  {registrosPaginaActual.length > 0 ? (
+                    registrosPaginaActual.map((l, idx) => (
                       <tr key={l.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         <td className="px-4 py-2 text-sm text-gray-800">{l.usuario}</td>
                         <td className="px-4 py-2 text-sm text-gray-800">{l.fecha}</td>
@@ -280,6 +293,43 @@ function MacroLecturas() {
                 </tbody>
               </table>
             </div>
+
+            {/* Controles de paginación */}
+            {totalPaginas > 1 && (
+              <div className="flex justify-center mt-6">
+                <nav className="inline-flex rounded-md shadow">
+                  <button
+                    onClick={() => cambiarPagina(paginaActual - 1)}
+                    disabled={paginaActual === 1}
+                    className="px-3 py-1 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  
+                  {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(numero => (
+                    <button
+                      key={numero}
+                      onClick={() => cambiarPagina(numero)}
+                      className={`px-3 py-1 border-t border-b border-gray-300 text-sm font-medium ${
+                        paginaActual === numero 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {numero}
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => cambiarPagina(paginaActual + 1)}
+                    disabled={paginaActual === totalPaginas}
+                    className="px-3 py-1 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         </div>
       </main>

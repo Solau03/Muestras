@@ -169,21 +169,19 @@ const RegistroCloroPH = () => {
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Operario</th>
+            
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Fecha</th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora</th>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Ubicación</th>
+           
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {registros.map((registro) => (
             <tr key={registro.id}>
-              <td className="px-4 py-2 text-sm">{registro.usuario}</td>
+              
               <td className="px-4 py-2 text-sm">{registro.fecha}</td>
               <td className="px-4 py-2 text-sm">{registro.hora}</td>
-              <td className="px-4 py-2 text-sm">
-                {registro.ubicacion.lat}, {registro.ubicacion.lng}
-              </td>
+              
             </tr>
           ))}
         </tbody>
@@ -200,25 +198,23 @@ const RegistroCloroPH = () => {
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Operario</th>
+           
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">pH</th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Cloro (ppm)</th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Fecha</th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora</th>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Ubicación</th>
+            
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {registros.map((registro) => (
             <tr key={registro.id}>
-              <td className="px-4 py-2 text-sm">{registro.usuario}</td>
+      
               <td className="px-4 py-2 text-sm">{registro.ph}</td>
               <td className="px-4 py-2 text-sm">{registro.cloro}</td>
               <td className="px-4 py-2 text-sm">{registro.fecha}</td>
               <td className="px-4 py-2 text-sm">{registro.hora}</td>
-              <td className="px-4 py-2 text-sm">
-                {registro.ubicacion.lat}, {registro.ubicacion.lng}
-              </td>
+              
             </tr>
           ))}
         </tbody>
@@ -230,26 +226,28 @@ const RegistroCloroPH = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      {/* Header */}
-      <header className="bg-blue-600 text-white p-4 rounded-lg shadow-md mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold">Registro de Cloro y pH</h1>
-          <p className="text-sm">Usuario: {usuario}</p>
-          {ubicacion && (
-            <p className="text-xs">Ubicación: {ubicacion.lat}, {ubicacion.lng} (Precisión: {ubicacion.precision}m)</p>
-          )}
-          {errorUbicacion && (
-            <p className="text-xs text-yellow-300">{errorUbicacion}</p>
-          )}
-        </div>
-        <button 
-          onClick={cerrarSesion}
-          className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-sm"
-        >
-          Cerrar sesión
-        </button>
-      </header>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white-100 to-white-100">
+  {/* Header Responsive */}
+  <header className="bg-blue-400 text-white p-3 sm:p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0">
+    <div className="text-center sm:text-left">
+      <h1 className="text-xl sm:text-2xl font-bold">Bienvenido</h1>
+      <p className="text-xs sm:text-sm">👤 {usuario}</p>
+    </div>
+    <div className="flex gap-2">
+      <button 
+        onClick={() => navigate("/BocatomaDashboard")}
+        className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 sm:px-4 sm:py-2 rounded text-sm sm:text-base transition-colors"
+      >
+        Inicio
+      </button>
+      <button 
+        onClick={cerrarSesion}
+        className="bg-red-500 hover:bg-red-600 px-3 py-1 sm:px-4 sm:py-2 rounded text-sm sm:text-base transition-colors"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
 
       {/* Navegación entre secciones */}
       <div className="flex mb-4 border-b border-gray-200">
@@ -317,16 +315,7 @@ const RegistroCloroPH = () => {
             </div>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-            <textarea
-              value={formData.observaciones}
-              onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
-              className="w-full p-2 border border-gray-300 rounded"
-              rows="3"
-              placeholder="Observaciones adicionales..."
-            />
-          </div>
+         
           
           <button
             onClick={registrarPHCloro}

@@ -3,7 +3,7 @@ import app from "../FirebaseConfiguration";
 import { getDatabase, ref, set, push, onValue } from "firebase/database";
 import { useNavigate } from "react-router-dom";
 
-function OperarioMuestras() {
+function BocMuestras() {
   const [turbiedad, setTurbiedad] = useState("");
   const [ph, setPh] = useState("");
   const [color, setColor] = useState("");
@@ -109,7 +109,7 @@ function OperarioMuestras() {
       </div>
       <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
         <button 
-          onClick={() => navigate("/OperarioDashboard")}
+          onClick={() => navigate("/BocatomaDashboard")}
           className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 sm:px-4 sm:py-2 rounded text-sm sm:text-base font-medium transition-colors"
         >
           Volver al inicio
@@ -252,4 +252,4 @@ function OperarioMuestras() {
   </div>
 </div>
   );}
-export default OperarioMuestras;
+export default BocMuestras;

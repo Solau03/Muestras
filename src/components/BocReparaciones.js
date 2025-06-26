@@ -3,7 +3,7 @@ import { getDatabase, ref, remove, push, update,get,  set, onValue } from 'fireb
 import app from '../FirebaseConfiguration';
 import { useNavigate } from "react-router-dom";
 
-function RegistroOrden() {
+function BocRegistroOrden() {
   const [nuevaOrden, setNuevaOrden] = useState('');
   const [ordenesUsuario, setOrdenesUsuario] = useState([]);
   const nombreUsuario = localStorage.getItem('nombreUsuario') || 'Operario';
@@ -144,7 +144,7 @@ function RegistroOrden() {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={() => navigate("/OperarioDashboard")}
+            onClick={() => navigate("/BocatomaDashboard")}
             className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 sm:px-4 sm:py-2 rounded text-sm sm:text-base transition-colors"
           >
             Inicio
@@ -249,4 +249,4 @@ function RegistroOrden() {
   );
 }
 
-export default RegistroOrden;
+export default BocRegistroOrden;

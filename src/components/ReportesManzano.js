@@ -122,7 +122,6 @@ const ReportesManzano = () => {
         <div className="bg-white p-3 border border-gray-300 rounded shadow-lg max-w-xs">
           <p className="font-bold break-words">{label}</p>
           <p className="text-blue-600">{`${payload[0].name}: ${payload[0].value}`}</p>
-          <p className="text-gray-500 text-sm break-words">Ubicación: {payload[0].payload.ubicacion}</p>
         </div>
       );
     }
@@ -167,7 +166,7 @@ const ReportesManzano = () => {
         <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
         <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
         <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
-        <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
+       
       </nav>
       </aside>
 

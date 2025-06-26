@@ -24,6 +24,10 @@ import VisualizacionRegistros from "./components/AdmiBocatoma.js";
 import AdmiRegistroCloroPH from "./components/AdmiManzano.js";
 import AdmiNivelTanque from "./components/AdmiTanque.js";
 import ReportesNivelTanque from "./components/ReporteTanque.js";
+import BocNivelTanque from "./components/BocTanque.js";
+import BocMuestras from "./components/BocMuestras.js";
+import BocMacroLecturas from "./components/BocMacros.js";
+import BocRegistroOrden from "./components/BocReparaciones.js";
 
 function App() {
   return (
@@ -52,6 +56,10 @@ function App() {
          <Route path="/AdmiBocatoma" element={<VisualizacionRegistros />} />
          <Route path="/AdmiTanque" element={<AdmiNivelTanque />} />
          <Route path="/ReporteTanque" element={<ReportesNivelTanque />} />
+         <Route path="/BocTanque" element={<BocNivelTanque />} />
+         <Route path="/BocMuestra" element={<BocMuestras />} />
+         <Route path="/BocMacro" element={<BocMacroLecturas />} />
+         <Route path="/BocOrdenes" element={<BocRegistroOrden />} />
       </Routes>
     </Router>
   );

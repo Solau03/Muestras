@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import app from "../FirebaseConfiguration";
 import { getDatabase, ref, set, push, onValue, remove } from "firebase/database";
 import * as XLSX from "xlsx";
@@ -14,6 +14,10 @@ function Muestras() {
   const [muestraAEliminar, setMuestraAEliminar] = useState(null);
   const [loading, setLoading] = useState(false);
   
+  // Estados para la paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [registrosPorPagina] = useState(10);
+
   // Estados para manejar errores de validación
   const [errores, setErrores] = useState({
     turbiedad: false,
@@ -49,6 +53,20 @@ function Muestras() {
 
     cargarMuestras();
   }, [db]);
+
+  // Cálculos para paginación
+  const totalPaginas = Math.ceil(muestras.length / registrosPorPagina);
+  const muestrasPaginaActual = useMemo(() => {
+    const inicio = (paginaActual - 1) * registrosPorPagina;
+    const fin = inicio + registrosPorPagina;
+    return muestras.slice(inicio, fin);
+  }, [muestras, paginaActual, registrosPorPagina]);
+
+  // Cambiar de página
+  const cambiarPagina = (numeroPagina) => {
+    setPaginaActual(numeroPagina);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const validarDatos = () => {
     const phNum = parseFloat(ph);
@@ -103,6 +121,7 @@ function Muestras() {
           cloro: false,
           formato: false
         });
+        setPaginaActual(1); // Volver a la primera página al guardar nueva muestra
       })
       .catch((error) => {
         alert("Error: " + error.message);
@@ -115,6 +134,7 @@ function Muestras() {
     try {
       await remove(ref(db, `muestras/muestras/${id}`));
       setMuestraAEliminar(null);
+      // No cambiamos la página aquí para mantener la posición del usuario
     } catch (error) {
       console.error("Error al eliminar muestra:", error);
       alert("Ocurrió un error al eliminar la muestra");
@@ -141,35 +161,34 @@ function Muestras() {
   };
 
   return (
-     <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
-      {/* Sidebar (similar al que tienes en AdmiNivelTanque) */}
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+      {/* Sidebar */}
       <aside className={`fixed md:sticky top-0 z-30 md:z-0 w-64 bg-white shadow-md p-4 h-screen md:h-auto`}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-blue-600">Reportes</h2>
         </div>
         <nav className="space-y-2">
-        <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
-        <a href="/Muestras" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Muestras Calidad</a>
-        <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
-        <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
-        <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
-        <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
-        <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
-        <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
-        <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
-        <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
-        <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
-      </nav>
+          <a href="/Admi" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Usuarios</a>
+          <a href="/Muestrasreportes" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes calidad</a>
+          <a href="/AdmiTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Lecturas Tanque</a>
+          <a href="/ReporteTanque" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Reportes Tanque</a>
+          <a href="/AdmiOrden" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition">Ordenes Reparación</a>
+          <a href="/Macros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Lecturas Macro</a>
+          <a href="/ReporteMacros" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Macro</a>
+          <a href="/AdmiBocatoma" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Visita Bocatoma</a>
+          <a href="/AdmiManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Muestras Manzano</a>
+          <a href="/ReportesManzano" className="block py-2 px-3 text-gray-700 hover:bg-blue-50 hover:text-red-500 rounded transition">Reportes Manzano</a>
+        </nav>
       </aside>
 
       {/* Contenido principal */}
       <main className="flex-1 p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
-  <div className="p-6 text-center">
-    <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800">Registro de Muestras</h2>
-    <p className="mt-2 text-sm text-green-600">Ingrese los parámetros de calidad del agua</p>
-  </div>
-</div>
+          <div className="p-6 text-center">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800">Registro de Muestras</h2>
+            <p className="mt-2 text-sm text-green-600">Ingrese los parámetros de calidad del agua</p>
+          </div>
+        </div>
 
         {/* Formulario mejorado */}
         <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-100">
@@ -260,14 +279,21 @@ function Muestras() {
         {/* Tabla de muestras mejorada */}
         <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
           <div className="flex flex-col md:flex-row justify-between items-center px-6 py-4 border-b border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2 md:mb-0">Historial de Muestras</h3>
-            <button
-              onClick={exportToExcel}
-              className={`px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow ${muestras.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={muestras.length === 0}
-            >
-              Exportar a Excel
-            </button>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2 md:mb-0">Historial de Muestras</h3>
+              <p className="text-sm text-gray-500">
+                Mostrando {muestrasPaginaActual.length} de {muestras.length} registros
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={exportToExcel}
+                className={`px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow ${muestras.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={muestras.length === 0}
+              >
+                Exportar a Excel
+              </button>
+            </div>
           </div>
           
           {loading ? (
@@ -275,55 +301,97 @@ function Muestras() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turbiedad</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cloro</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha/Hora</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {muestras.length > 0 ? (
-                    muestras.map((muestra) => (
-                      <tr key={muestra.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{muestra.nombreUsuario}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Turbiedad} NTU</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Ph}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Cloro} mg/L</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Color} UC</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="font-medium">{muestra.Fecha}</div>
-                          <div className="text-xs text-gray-400">{muestra.Hora}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <button
-                            onClick={() => setMuestraAEliminar(muestra)}
-                            className="text-red-600 hover:text-red-900 font-medium flex items-center"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Eliminar
-                          </button>
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turbiedad</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cloro</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha/Hora</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {muestrasPaginaActual.length > 0 ? (
+                      muestrasPaginaActual.map((muestra) => (
+                        <tr key={muestra.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{muestra.nombreUsuario}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Turbiedad} NTU</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Ph}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Cloro} mg/L</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{muestra.Color} UC</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="font-medium">{muestra.Fecha}</div>
+                            <div className="text-xs text-gray-400">{muestra.Hora}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() => setMuestraAEliminar(muestra)}
+                              className="text-red-600 hover:text-red-900 font-medium flex items-center"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-4 text-center text-gray-400">
+                          No hay muestras registradas
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="7" className="px-6 py-4 text-center text-gray-400">
-                        No hay muestras registradas
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Controles de paginación */}
+              {totalPaginas > 1 && (
+                <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+                  <div className="text-sm text-gray-500">
+                    Página {paginaActual} de {totalPaginas}
+                  </div>
+                  <nav className="flex space-x-2">
+                    <button
+                      onClick={() => cambiarPagina(paginaActual - 1)}
+                      disabled={paginaActual === 1}
+                      className="px-3 py-1 rounded border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Anterior
+                    </button>
+                    
+                    {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(numero => (
+                      <button
+                        key={numero}
+                        onClick={() => cambiarPagina(numero)}
+                        className={`px-3 py-1 rounded border text-sm font-medium ${
+                          paginaActual === numero 
+                            ? 'bg-blue-600 border-blue-600 text-white' 
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {numero}
+                      </button>
+                    ))}
+                    
+                    <button
+                      onClick={() => cambiarPagina(paginaActual + 1)}
+                      disabled={paginaActual === totalPaginas}
+                      className="px-3 py-1 rounded border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Siguiente
+                    </button>
+                  </nav>
+                </div>
+              )}
+            </>
           )}
         </div>
 
