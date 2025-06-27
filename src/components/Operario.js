@@ -36,13 +36,13 @@ export default function OperarioDashboard() {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
       <button 
         onClick={() => navigate("/OperarioMuestras")}
-        className="bg-white border-2 border-yellow-400 hover:bg-yellow-50 text-gray-800 font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-xl shadow text-sm sm:text-base transition-colors"
+        className="bg-white border-2 border-indigo-400 hover:bg-blue-50 text-gray-800 font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-xl shadow text-sm sm:text-base transition-colors"
       >
         Registrar Muestra Caudal
       </button>
       <button 
         onClick={() => navigate("/OperarioMacros")}
-        className="bg-white border-2 border-red-600 hover:bg-red-50 text-gray-800 font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-xl shadow text-sm sm:text-base transition-colors"
+        className="bg-white border-2 border-green-600 hover:bg-green-50 text-gray-800 font-bold py-2 sm:py-3 px-4 sm:px-5 rounded-xl shadow text-sm sm:text-base transition-colors"
       >
         Registrar Lectura Macro
       </button>
